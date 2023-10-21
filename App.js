@@ -1,3 +1,4 @@
+// 설치 목록
 // npm install express sqlite3 bcrypt body-parser
 
 const express = require("express");
