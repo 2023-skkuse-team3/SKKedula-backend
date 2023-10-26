@@ -67,76 +67,51 @@ app.post("/login", (req, res) => {
   });
 });
 
-// 유저가 지정한 강의실 정보를 받아 위치 조회
-app.post("/bins", (req, res) => {
-  const B_num = req.body.B_num;
-  const C_num = req.body.C_num;
-
-  if (!B_num || !C_num) {
-    return res.status(400).json({ message: "건물 번호와 강의실 번호를 모두 제공해주세요." });
-  }
-
-  db.get("SELECT Latitude, Longitude FROM Classrooms WHERE B_Num = ? AND C_Num = ?", [B_num, C_num], (err, row) => {
-    if (err) {
-      return res.status(500).json({ message: "데이터 로딩 실패" });
-    }
-    if (!row) {
-      return res.status(404).json({ message: "해당 강의실을 찾을 수 없습니다." });
-    }
-    res.json(row);
-  });
-});
-
-// 유저가 지정한 빌딩 번호 정보를 받아 위치 조회
-app.post("/bins/building", (req, res) => {
-  const B_num = req.body.B_num;
-
-  if (!B_num) {
-    return res.status(400).json({ message: "건물 번호를 제공해주세요." });
-  }
-
-  db.get("SELECT Latitude, Longitude FROM Buildings WHERE B_Num = ?", [B_num], (err, row) => {
-    if (err) {
-      return res.status(500).json({ message: "데이터 로딩 실패" });
-    }
-    if (!row) {
-      return res.status(404).json({ message: "해당 건물을 찾을 수 없습니다." });
-    }
-    res.json(row);
-  });
-});
-
 // user가 설정한 경로 좌표 저장
 app.post("/savepath", (req, res) => {
-  const { ID, Sequence, Coornidate_count, Start_latitude, Start_longitude, End_latitude, End_longitude,
-    Coordinate1_x, coordinate1_y, Coordinate2_x, coordinate2_y,
-    Coordinate3_x, coordinate3_y, Coordinate4_x, coordinate4_y,
-    Coordinate5_x, coordinate5_y, Coordinate6_x, coordinate6_y,
-    Coordinate7_x, coordinate7_y, Coordinate8_x, coordinate8_y,
-    Coordinate9_x, coordinate9_y, Coordinate10_x, coordinate10_y } = req.body;
+  const {
+    ID,
+    Sequence,
+    Stopover_count,
+    Start_latitude,
+    Start_longitude,
+    End_latitude,
+    End_longitude,
+    Stopover,
+  } = req.body;
+  
+  const placeholders = Array.from({ length: Stopover_count }, (_, i) => `?, ?`).join(', ');
 
-    const sql = `
+  const sql = `
     INSERT INTO user_routes (
-      ID, Sequence, Coordinate_count, Start_latitude, Start_longitude, 
+      ID, Sequence, Stopover_count, Start_latitude, Start_longitude, 
       End_latitude, End_longitude, 
-      Coordinate1_x, Coordinate1_y, Coordinate2_x, Coordinate2_y, 
-      Coordinate3_x, Coordinate3_y, Coordinate4_x, Coordinate4_y, 
-      Coordinate5_x, Coordinate5_y, Coordinate6_x, Coordinate6_y, 
-      Coordinate7_x, Coordinate7_y, Coordinate8_x, Coordinate8_y, 
-      Coordinate9_x, Coordinate9_y, Coordinate10_x, Coordinate10_y
+      ${placeholders}
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ${placeholders})
   `;
 
   const values = [
-    ID, Sequence, Coordinate_count, Start_latitude, Start_longitude,
-    End_latitude, End_longitude,
-    Coordinate1_x, Coordinate1_y, Coordinate2_x, Coordinate2_y,
-    Coordinate3_x, Coordinate3_y, Coordinate4_x, Coordinate4_y,
-    Coordinate5_x, Coordinate5_y, Coordinate6_x, Coordinate6_y,
-    Coordinate7_x, Coordinate7_y, Coordinate8_x, Coordinate8_y,
-    Coordinate9_x, Coordinate9_y, Coordinate10_x, Coordinate10_y
+    ID,
+    Sequence,
+    Stopover_count,
+    Start_latitude,
+    Start_longitude,
+    End_latitude,
+    End_longitude,
   ];
+
+  for (const coord of Stopover) {
+    values.push(coord.x);
+    values.push(coord.y);
+  }
+
+  // 남은 좌표에는 null 추가
+  const remainingPlaceholders = 10 - Stopover.length;
+  for (let i = 0; i < remainingPlaceholders; i++) {
+    values.push(null);
+    values.push(null);
+  }
 
   db.run(sql, values, (err) => {
     if (err) {
@@ -145,7 +120,6 @@ app.post("/savepath", (req, res) => {
       res.json({ message: '경로 정보가 성공적으로 저장되었습니다.' });
     }
   });
-
 });
 
 // user ID와 저장경로순서번호를 받아서 경로 좌표 조회
