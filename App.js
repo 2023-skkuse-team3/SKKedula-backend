@@ -89,7 +89,7 @@ app.post("/savepath", (req, res) => {
 });
 
 // user가 설정한 경로 삭제
-app.post("/deletepath", (req, res) => {
+app.delete("/deletepath", (req, res) => {
   const { ID, Sequence } = req.body;
 
   db.run(
@@ -106,7 +106,6 @@ app.post("/deletepath", (req, res) => {
     }
   );
 });
-
 
 // user ID와 저장경로순서번호를 받아서 경로 좌표 조회
 app.post("/getpath", (req, res) => {
@@ -127,6 +126,7 @@ app.post("/getpath", (req, res) => {
   );
 
 });
+
 
 const PORT = 3000;
 app.listen(PORT, () => {
