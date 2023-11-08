@@ -69,65 +69,46 @@ app.post("/login", (req, res) => {
 
 // user가 설정한 경로 좌표 저장
 app.post("/savepath", (req, res) => {
-  const {
-    ID,
-    Sequence,
-    Stopover_count,
-    Start_latitude,
-    Start_longitude,
-    End_latitude,
-    End_longitude,
-    Stopover,
-  } = req.body;
-  
-  const placeholders = Array.from({ length: Stopover_count }, (_, i) => `?, ?`).join(', ');
+  const { ID, Sequence, Stopover_count, Start_latitude, Start_longitude, End_latitude, End_longitude, Stopover} = req.body;
 
-  const sql = `
-    INSERT INTO user_routes (
-      ID, Sequence, Stopover_count, Start_latitude, Start_longitude, 
-      End_latitude, End_longitude, 
-      ${placeholders}
-    )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ${placeholders})
-  `;
-
-  const values = [
-    ID,
-    Sequence,
-    Stopover_count,
-    Start_latitude,
-    Start_longitude,
-    End_latitude,
-    End_longitude,
-  ];
-
-  for (const coord of Stopover) {
-    values.push(coord.x);
-    values.push(coord.y);
-  }
-
-  // 남은 좌표에는 null 추가
-  const remainingPlaceholders = 10 - Stopover.length;
-  for (let i = 0; i < remainingPlaceholders; i++) {
-    values.push(null);
-    values.push(null);
-  }
-
-  db.run(sql, values, (err) => {
-    if (err) {
-      res.status(500).json({ error: '경로 저장 오류' });
-    } else {
-      res.json({ message: '경로 정보가 성공적으로 저장되었습니다.' });
+  db.run(
+    "INSERT INTO Userpath (ID, Sequence, Stopover_count, Start_latitude, Start_longitude, End_latitude, End_longitude, Stopover) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+    [ID, Sequence, Stopover_count, Start_latitude, Start_longitude, End_latitude, End_longitude, Stopover],
+    function (err) {
+      if (err) {
+        return res.status(500).json({ message: "경로 저장 오류" });
+      }
+      res.json({ message: "경로가 정상적으로 저장되었습니다." });
     }
-  });
+  );
 });
+
+// user가 설정한 경로 삭제
+app.post("/deletepath", (req, res) => {
+  const { ID, Sequence } = req.body;
+
+  db.run(
+    "DELETE FROM Userpath WHERE ID = ? AND Sequence = ?",
+    [ID, Sequence],
+    function (err) {
+      if (err) {
+        return res.status(500).json({ message: "경로 삭제 오류" });
+      }
+      if (this.changes === 0) {
+        return res.status(404).json({ message: "경로를 찾을 수 없습니다." });
+      }
+      res.json({ message: "경로가 성공적으로 삭제되었습니다." });
+    }
+  );
+});
+
 
 // user ID와 저장경로순서번호를 받아서 경로 좌표 조회
 app.post("/getpath", (req, res) => {
   const { ID, Sequence } = req.body;
 
   db.get(
-    "SELECT * FROM user_routes WHERE ID = ? AND Sequence = ?", [ID, Sequence], (err, row) => {
+    "SELECT * FROM Userpath WHERE ID = ? AND Sequence = ?", [ID, Sequence], (err, row) => {
       if (err) {
         res.status(500).json({ message: "데이터 로딩 실패" });
         return;
