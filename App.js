@@ -71,6 +71,11 @@ app.post("/login", (req, res) => {
 app.post("/savepath", (req, res) => {
   const { ID, Sequence, Stopover_count, Start_latitude, Start_longitude, End_latitude, End_longitude, Stopover} = req.body;
 
+  // 경로 데이터 유효성 검사
+  if (!ID || !Sequence || !Start_latitude || !Start_longitude || !End_latitude || !End_longitude || !Stopover || isNaN(Sequence) || isNaN(Stopover_count)) {
+    return res.status(400).json({ message: "입력 데이터가 유효하지 않습니다." });
+  }
+
   db.run(
     "INSERT INTO Userpath (ID, Sequence, Stopover_count, Start_latitude, Start_longitude, End_latitude, End_longitude, Stopover) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
     [ID, Sequence, Stopover_count, Start_latitude, Start_longitude, End_latitude, End_longitude, Stopover],
