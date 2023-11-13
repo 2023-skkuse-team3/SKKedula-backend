@@ -9,14 +9,9 @@ const bcrypt = require("bcrypt");
 const bodyParser = require("body-parser");
 
 const app = express();
-const db = new sqlite3.Database("./skkedula.db");
+const db = new sqlite3.Database('skkedula-v1.db');
 app.use(bodyParser.json());
 
-const saltRounds = 10;
-
-
-year = 2023;
-semester = 2;
 
 // 회원가입
 app.post("/register", (req, res) => {
@@ -80,13 +75,15 @@ app.post("/login", (req, res) => {
 //과목 추가, (front에서 data 입력 -> db에 추가) 
 // course_name을 유저가 검색해서 자기가 맞는 과목을 넣을 때 course_name이 여러개일 경우..
 app.post("/timetable/add", (req, res) => {
-  const { course_name } = req.body;
-
+  const course_name  = req.body.course_name;
+  const userID = req.body.userID;
+  // userID = 1
+  console.log(course_name);
   // 과목을 courses 테이블에서 찾습니다.
   const selectCourseQuery = `
     SELECT *
-    FROM courses
-    WHERE course_name = ?
+    FROM Courses
+    WHERE Course_name = ?
   `;
 
   db.all(selectCourseQuery, [course_name], (err, courseData) => {
@@ -108,13 +105,12 @@ app.post("/timetable/add", (req, res) => {
       // 단일 과목인 경우
       // 찾은 과목을 timetable 테이블에 추가합니다.
       const course_id = courseData[0].course_ID;
-      const student_ID = 10; //일단 임의값
       const insertTimetableQuery = `
         INSERT INTO Enrollments (student_ID , course_ID)
         VALUES (?, ?)
       `;
 
-      db.run(insertTimetableQuery, [student_ID, course_id], (err) => {
+      db.run(insertTimetableQuery, [userID, course_id], (err) => {
         if (err) {
           return res.status(500).json({ message: "과목 추가 실패" });
         }
@@ -133,9 +129,8 @@ app.post("/timetable/add", (req, res) => {
 //custom data를 받을 경우에는 유저가 직접 course_name, class_time, class_room 같은 내용을 직접 입력하는 란이 있다면.
 app.post("/timetable/addSelectedCourse", (req, res) => {
   const {
-    course_ID
+    userID, course_ID
   } = req.body;
-  const student_ID = 10; //일단 임의값
   const insertQuery = `
     INSERT INTO Enrollments (student_ID , course_ID)
     VALUES (?, ?)
@@ -143,7 +138,7 @@ app.post("/timetable/addSelectedCourse", (req, res) => {
 
   db.run(
     insertQuery,
-    [student_ID, course_ID],
+    [userID, course_ID],
     function (err) {
       if (err) {
         return res.status(500).json({ message: "과목 추가 실패" });
@@ -155,28 +150,26 @@ app.post("/timetable/addSelectedCourse", (req, res) => {
 });
 
 
-//과목 삭제, (front에서 요청이 옴 -> db에서 삭제)
-app.delete("/timetable/delete", (req, res) => {
-  const {course_ID } = req.body; // 
-  const student_ID = 10; //일단 임의값
-  // DELETE 쿼리를 실행하여 데이터베이스에서 해당 과목 삭제
-  const deleteQuery = `
-    DELETE FROM Enrollments
-    WHERE student_ID = ?
-    AND course_ID = ? `;
+// //과목 삭제, (front에서 요청이 옴 -> db에서 삭제)
+// app.delete("/timetable/delete", (req, res) => {
+//   const {userID, course_ID} = req.body;
+//   const deleteQuery = `
+//     DELETE FROM Enrollments
+//     WHERE student_ID = ?
+//     AND course_ID = ? `;
 
-  db.run(deleteQuery, [student_ID, course_ID], function (err) {
-    if (err) {
-      return res.status(500).json({ message: "과목 삭제 실패" });
-    }
+//   db.run(deleteQuery, [userID, course_ID], function (err) {
+//     if (err) {
+//       return res.status(500).json({ message: "과목 삭제 실패" });
+//     }
 
-    if (this.changes > 0) {
-      res.json({ message: "과목이 삭제되었습니다." }); //db에 변경이 있을 경우 this.changes가 0보다 커진다. 따라서 삭제 된 걸 확인 할 수 있다.
-    } else {
-      res.status(404).json({ message: "과목을 찾을 수 없습니다." });
-    }
-  });
-});
+//     if (this.changes > 0) {
+//       res.json({ message: "과목이 삭제되었습니다." }); //db에 변경이 있을 경우 this.changes가 0보다 커진다. 따라서 삭제 된 걸 확인 할 수 있다.
+//     } else {
+//       res.status(404).json({ message: "과목을 찾을 수 없습니다." });
+//     }
+//   });
+// });
 
 
 // edit에 어떤것? 어차피 course_id가 바뀌는게 아니라면 db를 건들필요없는데 professor나 이름 같은거 바꾸는거는 db 바꿀 게 없으니 edit api
@@ -209,60 +202,84 @@ app.delete("/timetable/delete", (req, res) => {
 
 
 app.get("/timetable/search", (req, res) => {
-  // Extract the search query from the request's query string parameter 'searchQuery'
  
   const searchQuery = req.query.searchQuery; 
 
-  // Log the search query to the console for debugging purposes
+
   console.log("Received search query: ", searchQuery);
-  // Define the SQL SELECT query, using a placeholder for parameter substitution
   const selectQuery = `
     SELECT *
     FROM courses  
-    WHERE course_name LIKE ?;  // Using the LIKE operator to search for matches in 'course_name'
+    WHERE course_name LIKE ?;  
   `;
 
-  // Construct the search pattern with '%' wildcards for partial matches
+
   const searchPattern = `%${searchQuery}%`; 
 
-  // Execute the database query with the search pattern
+
   db.all(
     selectQuery,
-    [searchPattern],  // Substitute the placeholder with the search pattern
+    [searchPattern],  
     (err, data) => {
       if (err) {
-        // Send a server error response if there's an issue executing the query
+ 
         return res.status(500).json({ message: "과목 검색 실패", error: err.message });
       }
 
-      // Send the search results back to the client
       res.json(data);
     }
   );
 });
 
 
-app.post("/timetable/test", (req, res) => {
-  // Extract course details from request body
-  const { course_id, course_name, professor, time_start, class_room } = req.body;
+// app.post("/timetable/test", (req, res) => {
+//   // Extract course details from request body
+//   const { course_id, course_name, professor, time_start, class_room } = req.body;
 
-  // Prepare INSERT statement
-  const insertQuery = `
-    INSERT INTO courses (Course_ID, Course_name, Professor, Time_start, Room_num)
-    VALUES (?, ?, ?, ?, ?)
-  `;
+//   // Prepare INSERT statement
+//   const insertQuery = `
+//     INSERT INTO courses (Course_ID, Course_name, Professor, Time_start, Room_num)
+//     VALUES (?, ?, ?, ?, ?)
+//   `;
 
-  // Execute INSERT statement
-  db.run(insertQuery, [course_id, course_name, professor, class_time, class_room], function(err) {
-    if (err) {
-      // If there is an error, send back an error response
-      res.status(500).json({ message: "Failed to insert course into database", error: err.message });
-    } else {
-      // If successful, send back a success response
-      res.status(200).json({ message: "Course added successfully"});
-    }
-  });
-});
+//   // Execute INSERT statement
+//   db.run(insertQuery, [course_id, course_name, professor, class_time, class_room], function(err) {
+//     if (err) {
+//       // If there is an error, send back an error response
+//       res.status(500).json({ message: "Failed to insert course into database", error: err.message });
+//     } else {
+//       // If successful, send back a success response
+//       res.status(200).json({ message: "Course added successfully"});
+//     }
+//   });
+// });
+
+// //* 클라이언트가 유저아이디전송-> 수강 과목 정보 조회*/
+// app.post('/timetables/courses', (req, res) => {
+//   const userID = req.body.userID; // 클라이언트에서 사용자 ID를 받기
+//   //const userID = 1
+
+//   db.all('SELECT * FROM Enrollments WHERE Student_ID = ?', [userID], (err, rows) => {
+//       if (err) {
+//           res.status(500).json({ error: err.message });
+//           return;
+//       }
+
+//       const courseIDs = rows.map(row => row.Course_ID);
+//       const query = `SELECT * FROM Courses WHERE Course_ID IN (${courseIDs.map(() => '?').join(',')})`;
+
+//       db.all(query, courseIDs, (err, courseDetails) => {
+//           if (err) {
+//               res.status(500).json({ error: err.message });
+//               return;
+//           }
+
+//           //console.log(courseDetails);
+
+//           res.json(courseDetails);
+//       });
+//   });
+// });
 
 
 
