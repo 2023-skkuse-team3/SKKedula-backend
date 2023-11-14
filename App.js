@@ -201,12 +201,12 @@ app.post("/timetable/addSelectedCourse", (req, res) => {
 
 
 
-app.get("/timetable/search", (req, res) => {
+app.post("/timetable/searchByCourse", (req, res) => {
  
-  const searchQuery = req.query.searchQuery; 
+  const course_name  = req.body.course_name;
 
 
-  console.log("Received search query: ", searchQuery);
+
   const selectQuery = `
     SELECT *
     FROM courses  
@@ -214,7 +214,7 @@ app.get("/timetable/search", (req, res) => {
   `;
 
 
-  const searchPattern = `%${searchQuery}%`; 
+  const searchPattern = `%${course_name}%`; 
 
 
   db.all(
@@ -230,6 +230,36 @@ app.get("/timetable/search", (req, res) => {
     }
   );
 });
+
+
+app.post("/timetable/searchByProfessor", (req, res) => {
+ 
+  const professor  = req.body.professor;
+
+  const selectQuery = `
+    SELECT *
+    FROM courses  
+    WHERE Professor LIKE ?;  
+  `;
+
+
+  const searchPattern = `%${professor}%`; 
+
+
+  db.all(
+    selectQuery,
+    [searchPattern],  
+    (err, data) => {
+      if (err) {
+ 
+        return res.status(500).json({ message: "과목 검색 실패", error: err.message });
+      }
+
+      res.json(data);
+    }
+  );
+});
+
 
 
 // app.post("/timetable/test", (req, res) => {
