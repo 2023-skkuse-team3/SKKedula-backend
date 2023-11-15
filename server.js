@@ -185,7 +185,81 @@ app.post("/register", (req, res) => {
       });
     });
   });
-  // =======================================================================================================
+// =======================================================================================================
+// =========================================강의실 정보+학습공간============================================
+// 유저가 지정한 강의실 정보를 받아 위치 조회
+app.post("/bins", (req, res) => {
+  const Building_num = req.body.Building_num;
+  const Room_num = req.body.Room_num;
+
+  if (!Building_num || !Room_num) {
+      return res.status(400).json({ message: "건물 번호와 강의실 번호를 모두 제공해주세요." });
+  }
+
+  db.get("SELECT Latitude, Longitude FROM Classrooms WHERE Building_num = ? AND Room_Num = ?", [Building_num, Room_num], (err, row) => {
+      if (err) {
+          return res.status(500).json({ message: "데이터 로딩 실패" });
+      }
+      if (!row) {
+          return res.status(404).json({ message: "해당 강의실을 찾을 수 없습니다." });
+      }
+      res.json(row);
+  });
+});
+
+// 유저가 지정한 빌딩 번호 정보를 받아 위치 조회
+app.post("/bins/building", (req, res) => {
+  const Building_num = req.body.Building_num;
+
+  if (!Building_num) {
+      return res.status(400).json({ message: "건물 번호를 제공해주세요." });
+  }
+
+  db.get("SELECT Latitude, Longitude FROM Buildings WHERE Building_num = ?", [Building_num], (err, row) => {
+      if (err) {
+          return res.status(500).json({ message: "데이터 로딩 실패" });
+      }
+      if (!row) {
+          return res.status(404).json({ message: "해당 건물을 찾을 수 없습니다." });
+      }
+      res.json(row);
+  });
+});
+//학습 공간 등록
+app.post("/add_study_space", (req, res) => {
+  const { Name, Building_num, Latitude, Longitude, Floor } = req.body;
+
+  db.run(
+    "INSERT INTO Studyspaces (Name, Building_num, Latitude, Longitude, Floor) VALUES (?, ?, ?, ?, ?)",
+    [Name, Building_num, Latitude, Longitude, Floor],
+    function (err) {
+      if (err) {
+        return res.status(500).json({ message: "학습 공간 등록 오류" });
+      }
+      res.json({ message: "학습 공간이 정상적으로 등록되었습니다." });
+    }
+  );
+});
+//유저가 지정한 빌딩 번호로 학습 공간 조회
+app.get("/study_spaces_in_building", (req, res) => {
+  const Building_num = req.query.Building_num;
+
+  if (!Building_num) {
+      return res.status(400).json({ message: "건물 번호를 제공해주세요." });
+  }
+
+  db.all("SELECT * FROM Studyspaces WHERE Building_num = ?", [Building_num], (err, rows) => {
+      if (err) {
+          return res.status(500).json({ message: "데이터 로딩 실패" });
+      }
+      if (!rows || rows.length === 0) {
+          return res.status(404).json({ message: "해당 건물에 학습 공간이 없습니다." });
+      }
+      res.json(rows);
+  });
+});
+// =========================================강의실 정보+학습공간============================================
+
 //---------------------------------------------------- userpath -------------------------------------------------------
 // user가 설정한 경로 좌표 저장
 app.post("/savepath", (req, res) => {
