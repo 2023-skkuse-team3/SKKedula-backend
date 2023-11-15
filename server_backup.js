@@ -10,16 +10,6 @@ const db = new sqlite3.Database("skkedula-v3.db"); // 데이터베이스 연결
 const bodyParser = require("body-parser");
 app.use(bodyParser.json());
 
-// session 사용
-const session = require("express-session");
-app.use(
-  session({
-    secret: "secret_key",
-    resave: false,
-    saveUninitialized: true,
-  })
-);
-
 //* 클라이언트가 유저아이디전송-> 수강 과목 정보 조회*/
 app.post("/timetables/courses", (req, res) => {
   const userID = req.body.userID; // 클라이언트에서 사용자 ID를 받기
@@ -168,7 +158,6 @@ app.post("/register", (req, res) => {
     );
   });
 });
-
 // 로그인
 app.post("/login", (req, res) => {
   const { user_id, password } = req.body;
@@ -191,7 +180,6 @@ app.post("/login", (req, res) => {
         }
 
         if (result) {
-          req.session.userId = user_id;
           res.json({ message: "로그인 성공" });
         } else {
           res.status(401).json({ message: "로그인 실패" });
@@ -200,21 +188,6 @@ app.post("/login", (req, res) => {
     }
   );
 });
-
-// 로그아웃
-app.get("/logout", (req, res) => {
-  if (req.session && req.session.userId) {
-    req.session.destroy((err) => {
-      if (err) {
-        return res.status(500).json({ message: "로그아웃 실패" });
-      }
-      res.json({ message: "로그아웃 성공" });
-    });
-  } else {
-    res.status(400).json({ message: "로그인 상태가 아닙니다." });
-  }
-});
-
 // =======================================================================================================
 // =========================================강의실 정보+학습공간============================================
 // 유저가 지정한 강의실 정보를 받아 위치 조회
