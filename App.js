@@ -67,6 +67,67 @@ app.post("/login", (req, res) => {
   });
 });
 
+// user가 설정한 경로 좌표 저장
+app.post("/savepath", (req, res) => {
+  const { ID, Sequence, Stopover_count, Start_latitude, Start_longitude, End_latitude, End_longitude, Stopover} = req.body;
+
+  // 경로 데이터 유효성 검사
+  if (!ID || !Sequence || !Start_latitude || !Start_longitude || !End_latitude || !End_longitude || !Stopover || isNaN(Sequence) || isNaN(Stopover_count)) {
+    return res.status(400).json({ message: "입력 데이터가 유효하지 않습니다." });
+  }
+
+  db.run(
+    "INSERT INTO Userpath (ID, Sequence, Stopover_count, Start_latitude, Start_longitude, End_latitude, End_longitude, Stopover) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+    [ID, Sequence, Stopover_count, Start_latitude, Start_longitude, End_latitude, End_longitude, Stopover],
+    function (err) {
+      if (err) {
+        return res.status(500).json({ message: "경로 저장 오류" });
+      }
+      res.json({ message: "경로가 정상적으로 저장되었습니다." });
+    }
+  );
+});
+
+// user가 설정한 경로 삭제
+app.delete("/deletepath", (req, res) => {
+  const { ID, Sequence } = req.body;
+
+  db.run(
+    "DELETE FROM Userpath WHERE ID = ? AND Sequence = ?",
+    [ID, Sequence],
+    function (err) {
+      if (err) {
+        return res.status(500).json({ message: "경로 삭제 오류" });
+      }
+      if (this.changes === 0) {
+        return res.status(404).json({ message: "경로를 찾을 수 없습니다." });
+      }
+      res.json({ message: "경로가 성공적으로 삭제되었습니다." });
+    }
+  );
+});
+
+// user ID와 저장경로순서번호를 받아서 경로 좌표 조회
+app.post("/getpath", (req, res) => {
+  const { ID, Sequence } = req.body;
+
+  db.get(
+    "SELECT * FROM Userpath WHERE ID = ? AND Sequence = ?", [ID, Sequence], (err, row) => {
+      if (err) {
+        res.status(500).json({ message: "데이터 로딩 실패" });
+        return;
+      }
+      if (!row) {
+        res.status(404).json({ message: "해당 경로를 찾을 수 없습니다." });
+      } else {
+        res.json(row);
+      }
+    }
+  );
+
+});
+
+
 const PORT = 3000;
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
