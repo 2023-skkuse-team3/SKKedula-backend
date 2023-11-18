@@ -10,16 +10,6 @@ const db = new sqlite3.Database("skkedula-v3.db"); // 데이터베이스 연결
 const bodyParser = require("body-parser");
 app.use(bodyParser.json());
 
-// session 사용
-const session = require("express-session");
-app.use(
-  session({
-    secret: "secret_key",
-    resave: false,
-    saveUninitialized: true,
-  })
-);
-
 //* 클라이언트가 유저아이디전송-> 수강 과목 정보 조회*/
 app.post("/timetables/courses", (req, res) => {
   const userID = req.body.userID; // 클라이언트에서 사용자 ID를 받기
@@ -168,7 +158,6 @@ app.post("/register", (req, res) => {
     );
   });
 });
-
 // 로그인
 app.post("/login", (req, res) => {
   const { user_id, password } = req.body;
@@ -191,7 +180,6 @@ app.post("/login", (req, res) => {
         }
 
         if (result) {
-          req.session.userId = user_id;
           res.json({ message: "로그인 성공" });
         } else {
           res.status(401).json({ message: "로그인 실패" });
@@ -200,25 +188,10 @@ app.post("/login", (req, res) => {
     }
   );
 });
-
-// 로그아웃
-app.get("/logout", (req, res) => {
-  if (req.session && req.session.userId) {
-    req.session.destroy((err) => {
-      if (err) {
-        return res.status(500).json({ message: "로그아웃 실패" });
-      }
-      res.json({ message: "로그아웃 성공" });
-    });
-  } else {
-    res.status(400).json({ message: "로그인 상태가 아닙니다." });
-  }
-});
-
 // =======================================================================================================
 // =========================================강의실 정보+학습공간============================================
 // 유저가 지정한 강의실 정보를 받아 위치 조회
-app.post("/search", (req, res) => {
+app.post("/bins", (req, res) => {
   const Building_num = req.body.Building_num;
   const Room_num = req.body.Room_num;
 
@@ -245,24 +218,18 @@ app.post("/search", (req, res) => {
   );
 });
 
-// 유저가 지정한 빌딩 번호 또는 이름으로 위치 조회
-app.post("/search/building", (req, res) => {
-  const { buildingNum, buildingName } = req.body;
+// 유저가 지정한 빌딩 번호 정보를 받아 위치 조회
+app.post("/bins/building", (req, res) => {
+  const Building_num = req.body.Building_num;
 
-  let query = "";
-  let params = [];
-
-  if (buildingNum) {
-      query = "SELECT Latitude, Longitude FROM Buildings WHERE Building_num = ?";
-      params = [buildingNum];
-  } else if (buildingName) {
-      query = "SELECT Latitude, Longitude FROM Buildings WHERE Building_name = ?";
-      params = [buildingName];
-  } else {
-      return res.status(400).json({ message: "건물 번호 또는 이름을 제공해주세요." });
+  if (!Building_num) {
+    return res.status(400).json({ message: "건물 번호를 제공해주세요." });
   }
 
-  db.get(query, params, (err, row) => {
+  db.get(
+    "SELECT Latitude, Longitude FROM Buildings WHERE Building_num = ?",
+    [Building_num],
+    (err, row) => {
       if (err) {
         return res.status(500).json({ message: "데이터 로딩 실패" });
       }
@@ -275,7 +242,6 @@ app.post("/search/building", (req, res) => {
     }
   );
 });
-
 //학습 공간 등록
 app.post("/add_study_space", (req, res) => {
   const { Name, Building_num, Latitude, Longitude, Floor } = req.body;
