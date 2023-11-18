@@ -291,6 +291,21 @@ app.post("/add_study_space", (req, res) => {
     }
   );
 });
+//학습공간 버튼 클릭시 정보 제공
+app.get("/studyspaces", (req, res) => {
+  const query = "SELECT * FROM Studyspaces";
+
+  db.all(query, [], (err, rows) => {
+      if (err) {
+          return res.status(500).json({ message: "데이터 로딩 실패" });
+      }
+      if (rows.length === 0) {
+          return res.status(404).json({ message: "학습 공간이 없습니다." });
+      }
+      res.json(rows);
+  });
+});
+
 //유저가 지정한 빌딩 번호로 학습 공간 조회
 app.get("/study_spaces_in_building", (req, res) => {
   const Building_num = req.query.Building_num;
