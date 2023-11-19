@@ -265,10 +265,10 @@ app.post("/search/building", (req, res) => {
   let params = [];
 
   if (Building_num) {
-      query = "SELECT Building_name, Latitude, Longitude FROM Buildings WHERE Building_num = ?";
+      query = "SELECT Building_name, Latitude, Longitude FROM Building WHERE Building_num = ?";
       params = [Building_num];
   } else if (Building_name) {
-      query = "SELECT Building_name, Latitude, Longitude FROM Buildings WHERE Building_name LIKE ?";
+      query = "SELECT Building_name, Latitude, Longitude FROM Building WHERE Building_name LIKE ?";
       params = [`%${Building_name}%`];
   } else if (Room_num) {
       query = "SELECT Room_num, Latitude, Longitude FROM Classrooms WHERE Room_num = ?";
@@ -279,6 +279,7 @@ app.post("/search/building", (req, res) => {
 
   db.get(query, params, (err, row) => {
       if (err) {
+        console.error(err); // 오류 출력
           return res.status(500).json({ message: "데이터 로딩 실패" });
       }
       if (!row) {
