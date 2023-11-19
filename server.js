@@ -263,31 +263,59 @@ app.post("/search/building", (req, res) => {
 
   let query = "";
   let params = [];
+  let isClassroomQuery = false;
 
   if (Building_num) {
-      query = "SELECT Building_name, Latitude, Longitude FROM Building WHERE Building_num = ?";
-      params = [Building_num];
+    query = "SELECT Building_name, Latitude, Longitude FROM Building WHERE Building_num = ?";
+    params = [Building_num];
   } else if (Building_name) {
-      query = "SELECT Building_name, Latitude, Longitude FROM Building WHERE Building_name LIKE ?";
-      params = [`%${Building_name}%`];
+    query = "SELECT Building_name, Latitude, Longitude FROM Building WHERE Building_name LIKE ?";
+    params = [`%${Building_name}%`];
   } else if (Room_num) {
+    const roomNumStr = String(Room_num); // Room_num을 문자열로 변환
+    const buildingPrefix = roomNumStr.substring(0, 2);
+
+    if (['25', '26', '27'].includes(buildingPrefix)) {
       query = "SELECT Room_num, Latitude, Longitude FROM Classrooms WHERE Room_num = ?";
       params = [Room_num];
+      isClassroomQuery = true;
+    } else {
+      query = "SELECT Building_name, Latitude, Longitude FROM Building WHERE Building_num = ?";
+      params = [buildingPrefix];
+    }
   } else {
-      return res.status(400).json({ message: "Building_num, Building_name 또는 Room_num을 제공해주세요." });
+    return res.status(400).json({ message: "Building_num, Building_name 또는 Room_num을 제공해주세요." });
   }
 
   db.get(query, params, (err, row) => {
-      if (err) {
-        console.error(err); // 오류 출력
-          return res.status(500).json({ message: "데이터 로딩 실패" });
-      }
-      if (!row) {
-          return res.status(404).json({ message: "검색 결과가 없습니다." });
-      }
+    if (err) {
+      console.error(err); // 오류 출력
+      return res.status(500).json({ message: "데이터 로딩 실패" });
+    }
+    if (!row) {
+      return res.status(404).json({ message: "검색 결과가 없습니다." });
+    }
+    // 결과가 Classrooms 테이블의 조회에서 나온 경우 Building_name 정보를 추가로 가져오기
+    if (isClassroomQuery && row.Room_num) {
+      // Room_num을 문자열로 변환
+      const roomNumStr = row.Room_num.toString();
+      const buildingNum = roomNumStr.substring(0, 2);
+      db.get("SELECT Building_name FROM Building WHERE Building_num = ?", [buildingNum], (err, buildingRow) => {
+        if (err) {
+          console.error(err); // 오류 출력
+          return res.status(500).json({ message: "건물 이름 로딩 실패" });
+        }
+        if (buildingRow) {
+          row.Building_name = buildingRow.Building_name;
+        }
+        res.json(row);
+      });
+    } else {
       res.json(row);
+    }
   });
 });
+
 
 //학습공간 버튼 클릭시 정보 제공
 app.get("/studyspaces", (req, res) => {
