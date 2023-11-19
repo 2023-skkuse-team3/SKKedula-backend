@@ -20,6 +20,31 @@ app.use(
   })
 );
 
+/*커스텀 과목 추가*/
+app.post('/custom-courses', (req, res) => {
+  const { user_id, course_name, Time, Room_num } = req.body;
+  
+  // courses 테이블에 데이터 추가
+  const insertCourseQuery = `INSERT INTO CustomCourses (course_name, user_id, time, room_num) VALUES (?, ?, ?, ?)`;
+  db.run(insertCourseQuery, [course_name, user_id, Time, Room_num], function(err) {
+      if (err) {
+          return console.error(err.message);
+      }
+      console.log(`A row has been inserted with rowid ${this.lastID}`);
+
+      // Enrollments 테이블에 데이터 추가
+      const insertEnrollmentQuery = `INSERT INTO Enrollments (Student_ID, Course_ID) VALUES (?, ?)`;
+      db.run(insertEnrollmentQuery, [user_id, this.lastID], function(err) {
+          if (err) {
+              return console.error(err.message);
+          }
+          console.log(`Enrollment created with rowid ${this.lastID}`);
+          res.status(200).send(`Course and enrollment created successfully!`);
+      });
+  });
+});
+
+
 //* 클라이언트가 유저아이디전송-> 수강 과목 정보 조회*/
 app.post("/timetables/courses", (req, res) => {
   const userID = req.body.userID; // 클라이언트에서 사용자 ID를 받기
