@@ -31,10 +31,10 @@ app.post('/custom-courses', (req, res) => {
           return console.error(err.message);
       }
       console.log(`A row has been inserted with rowid ${this.lastID}`);
-
+      const newCourseId = this.lastID;
       // Enrollments 테이블에 데이터 추가
       const insertEnrollmentQuery = `INSERT INTO Enrollments (Student_ID, Course_ID) VALUES (?, ?)`;
-      db.run(insertEnrollmentQuery, [user_id, this.lastID], function(err) {
+      db.run(insertEnrollmentQuery, [user_id, "custom_"+newCourseId], function(err) {
           if (err) {
               return console.error(err.message);
           }
@@ -43,7 +43,22 @@ app.post('/custom-courses', (req, res) => {
       });
   });
 });
+/* 커스텀 일정 조회 API*/
+app.get('/custom-courses', (req, res) => {
+  // 사용자 ID 쿼리 파라미터 받기
+  const { user_id } = req.body;
 
+  // 입력받은 사용자 ID를 사용하여 해당 사용자의 일정만 조회
+  const query = `SELECT * FROM CustomCourses WHERE user_id = ?`;
+
+  db.all(query, [user_id], (err, rows) => {
+      if (err) {
+          res.status(500).send(err.message);
+          return;
+      }
+      res.status(200).json(rows);
+  });
+});
 
 //* 클라이언트가 유저아이디전송-> 수강 과목 정보 조회*/
 app.post("/timetables/courses", (req, res) => {

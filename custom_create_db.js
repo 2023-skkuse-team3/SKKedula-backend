@@ -12,7 +12,9 @@ CREATE TABLE IF NOT EXISTS CustomCourses (
     course_name TEXT NOT NULL,
     user_id TEXT NOT NULL,
     time TEXT NOT NULL,
-    room_num INTEGER NOT NULL
+    room_num INTEGER NOT NULL,
+    Year INTEGER DEFAULT 2023,
+    Semester INTEGER DEFAULT 2
 );
 `, (err) => {
     if (err) {
