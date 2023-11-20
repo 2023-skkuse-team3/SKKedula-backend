@@ -6,6 +6,8 @@ const saltRounds = 10;
 const app = express();
 const db = new sqlite3.Database("skkedula-v3.db"); // 데이터베이스 연결
 
+
+
 // body-parser 미들웨어 사용
 const bodyParser = require("body-parser");
 app.use(bodyParser.json());
@@ -62,7 +64,7 @@ app.get('/custom-courses', (req, res) => {
 
 //* 클라이언트가 유저아이디전송-> 수강 과목 정보 조회*/
 app.post("/timetables/courses", (req, res) => {
-  const userID = req.body.userID; // 클라이언트에서 사용자 ID를 받기
+  const userID = req.body.user_id; // 클라이언트에서 사용자 ID를 받기
   //const userID = 1
 
   db.all(
@@ -74,7 +76,10 @@ app.post("/timetables/courses", (req, res) => {
         return;
       }
 
+      
+
       const courseIDs = rows.map((row) => row.Course_ID);
+      console.log(courseIDs)
       const query = `SELECT * FROM Courses WHERE Course_ID IN (${courseIDs
         .map(() => "?")
         .join(",")})`;
@@ -94,7 +99,7 @@ app.post("/timetables/courses", (req, res) => {
 });
 
 /** 학수번호에 해당하는 과목 삭제 */
-app.post("/timetables/courses", (req, res) => {
+app.delete("/timetables/courses", (req, res) => {
   const { user_id, course_id } = req.body;
 
   db.run(

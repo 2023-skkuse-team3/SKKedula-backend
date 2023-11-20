@@ -1,13 +1,18 @@
 from fastapi import FastAPI
 from selenium import webdriver
 from bs4 import BeautifulSoup
-import requests, os
+from pydantic import BaseModel
 
 app = FastAPI()
 from selenium import webdriver
-from html import unescape
 import pandas as pd
 import sqlite3
+
+
+# Pydantic 모델 정의
+class CourseRequest(BaseModel):
+    url: str
+    user_id: str
 
 
 # GET 요청을 처리하는 엔드포인트
@@ -16,11 +21,14 @@ async def read_root():
     return {"message": "8000포트 테스트 코드 입니다."}
 
 
-@app.post("/scrape_course_info/")
-async def scrape_course_info(url: str):
+@app.post("/scrape_course_info")
+async def scrape_course_info(request_data: CourseRequest):
+    user_id = request_data.user_id
     options = webdriver.ChromeOptions()
     options.add_argument("headless")
     options.add_argument("no-sandbox")
+    options.add_argument("--disable-gpu")  # GPU 사용 비활성화
+
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument(
         "user-agent={Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.121 Safari/537.36}"
@@ -31,7 +39,7 @@ async def scrape_course_info(url: str):
     driver.implicitly_wait(3)
 
     # 웹 페이지 열기
-    driver.get(url)
+    driver.get(request_data.url)
 
     # 페이지의 HTML 가져오기
     html = driver.page_source
@@ -69,7 +77,7 @@ async def scrape_course_info(url: str):
     json_data_list = []
 
     # SQLite 데이터베이스 연결
-    conn = sqlite3.connect("skkedula-v1.db")
+    conn = sqlite3.connect("../SKKedula-backend/skkedula-v3.db")
 
     # SQL 쿼리: Courses 테이블에서 데이터를 불러오는 쿼리
     query = "SELECT * FROM Courses"
@@ -105,4 +113,35 @@ async def scrape_course_info(url: str):
             unique_json_data_list.append(data)
             seen_codes.add(data["Course_ID"])
 
-    return unique_json_data_list
+    #    return unique_json_data_list
+    print(unique_json_data_list)
+
+    # 데이터베이스에 저장
+    cursor = conn.cursor()
+    # Enrollments 테이블에 데이터를 삽입하는 SQL 쿼리
+    insert_query = """
+        INSERT INTO Enrollments (Student_ID, Course_ID)
+        SELECT ?, ?
+        WHERE NOT EXISTS (
+            SELECT 1 FROM Enrollments WHERE Student_ID = ? AND Course_ID = ?
+        )
+    """
+
+    try:
+        # 각 과목에 대해 수강 정보를 Enrollments 테이블에 삽입
+        for course in unique_json_data_list:
+            print(course["Course_ID"])
+            cursor.execute(
+                insert_query,
+                (user_id, course["Course_ID"], user_id, course["Course_ID"]),
+            )  # 예시로 Student_ID를 1로 설정
+
+        # 데이터베이스에 변경사항 저장
+        conn.commit()
+    except sqlite3.Error as e:
+        conn.rollback()  # 오류 발생 시 롤백
+        conn.close()
+        return {"message": "Courses enrolled failed"}
+
+    conn.close()
+    return {"message": "Courses enrolled successfully", "data": unique_json_data_list}
