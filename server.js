@@ -311,9 +311,17 @@ app.post("/search/building", (req, res) => {
           return res.status(500).json({ message: "건물 이름 로딩 실패" });
         }
         if (buildingRow) {
-          row.Building_name = buildingRow.Building_name;
+          // 객체 순서를 변경하여 재구성
+          const reorderedRow = {
+            Building_name: buildingRow.Building_name,
+            Latitude: row.Latitude,
+            Longitude: row.Longitude
+          };
+          res.json(reorderedRow);
+        } else {
+          // 건물 이름이 없는 경우 기존 row 반환
+          res.json(row);
         }
-        res.json(row);
       });
     } else {
       res.json(row);
